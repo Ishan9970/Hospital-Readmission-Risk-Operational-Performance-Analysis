@@ -2,247 +2,205 @@
 
 ## Project Overview
 
-Hospital readmissions are a major concern in healthcare systems because they often indicate complications in patient recovery, ineffective discharge planning, or inadequate follow-up care. Hospitals closely monitor **30-day readmission rates** as a key quality metric.
+Hospital readmissions are a critical healthcare quality metric, often indicating gaps in patient recovery, discharge planning, or follow-up care.
 
-This project analyses **101,766 hospital encounters** to identify major drivers behind **30-day patient readmissions**. Using **SQL for analysis**, **Excel for risk segmentation**, and **Tableau for visualization**, the study investigates how factors such as age, length of stay, medication load, and disease complexity influence the probability of patient readmission.
+This project analyses **101,766 hospital encounters** to identify the key drivers behind **30-day patient readmissions**.
 
-The goal is to understand **which patient groups are most at risk of returning to the hospital**, allowing healthcare providers to improve post-discharge care and reduce avoidable readmissions.
+The workflow combines:
 
----
+* **SQL** for data cleaning and cohort analysis
+* **Excel** for structured aggregation
+* **Tableau** for executive-level visualization
 
-# Dataset
-
-Dataset: **Diabetes 130-US Hospitals Dataset (1999–2008)**
-
-This dataset contains hospital encounter records of diabetic patients collected across **130 hospitals in the United States**.
-
-### Dataset Size
-
-| Metric | Value |
-|------|------|
-Total hospital encounters | 101,766 |
-Unique patients | 71,518 |
-Readmitted within 30 days | 11,357 |
-Overall 30-day readmission rate | **11.16%** |
+The objective is to move beyond descriptive analysis and **quantify which factors most strongly influence readmission risk**.
 
 ---
 
-# Dataset Columns Used
+## Dataset
 
-The dataset contains more than 50 attributes. The following fields were used in this analysis:
+**Dataset:** Diabetes 130-US Hospitals Dataset (1999–2008)
 
-| Column | Description |
-|------|-------------|
-age | Patient age group |
-time_in_hospital | Length of hospital stay (days) |
-num_medications | Total medications administered |
-number_diagnoses | Total diagnoses recorded |
-readmitted | Readmission status (NO, >30, <30) |
+| Metric              | Value      |
+| ------------------- | ---------- |
+| Total Encounters    | 101,766    |
+| Unique Patients     | 71,518     |
+| 30-Day Readmissions | 11,357     |
+| Readmission Rate    | **11.16%** |
 
 ---
 
-# Data Cleaning
-
-Several preprocessing steps were required before analysis.
+## Data Preparation
 
 ### 1. Readmission Label Cleaning
 
-The `readmitted` column contained hidden characters (`\r`) which caused incorrect filtering.
-
-Example values:
-
-```
-NO\r
->30\r
-<30\r
-```
-
-These were cleaned using SQL string functions.
+The `readmitted` column contained hidden characters (`\r`). These were removed using SQL string functions to ensure accurate filtering.
 
 ---
 
-### 2. Creating Binary Readmission Flag
+### 2. Binary Readmission Flag
 
-To measure readmission risk consistently, a binary variable was created:
+A consistent analytical metric was created:
 
-| Readmission Status | Flag |
-|-------------------|------|
-|NO | 0 |
-|>30 days | 0 |
-|<30 days | 1 |
-
-```
+```sql
 CASE
-WHEN readmitted = '<30' THEN 1
+WHEN TRIM(readmitted) = '<30' THEN 1
 ELSE 0
 END AS readmission_flag
 ```
 
-This allowed calculation of **readmission probability using averages**.
+Readmission rate is computed as:
 
----
-
-# Key Metrics
-
-```
-Total Encounters: 101,766
-30-Day Readmissions: 11,357
-Overall Readmission Rate: 11.16%
+```sql
+AVG(readmission_flag)
 ```
 
 ---
 
-# Analysis Performed
+### 3. Feature Engineering
 
-The analysis focuses on identifying **key drivers of hospital readmissions**.
+To enable cohort-based analysis:
 
-Four major dimensions were analysed:
+* **Medication Band**
 
-1. Patient demographics  
-2. Hospital utilization patterns  
-3. Medication intensity  
-4. Disease complexity  
+  * Low (<10)
+  * Medium (10–20)
+  * High (>20)
 
----
+* **Diagnosis Complexity**
 
-# 1. Readmission Rate by Age
+  * Low (≤3)
+  * Medium (4–7)
+  * High (≥8)
 
-This analysis measures how readmission probability varies across age groups.
+* **Length of Stay**
 
-| Age Group | Readmission Rate |
-|----------|------------------|
-0-10 | 1.86% |
-10-20 | 5.79% |
-20-30 | 14.24% |
-30-40 | 11.23% |
-40-50 | 10.60% |
-50-60 | 9.67% |
-60-70 | 11.13% |
-70-80 | 11.77% |
-80-90 | 12.08% |
-90-100 | 11.10% |
-
-### Insight
-
-Readmission rates increase significantly after early adulthood and remain elevated in older populations.
-
-This indicates that **aging patients tend to require more complex care and follow-up monitoring**.
+  * Short (≤3 days)
+  * Medium (4–7 days)
+  * Long (>7 days)
 
 ---
 
-# 2. Length of Stay vs Readmission Risk
+## Analytical Approach
 
-The relationship between **hospital stay duration** and readmission probability was analysed.
+The analysis focuses on identifying **drivers of readmission risk** using:
 
-| Days in Hospital | Readmission Rate |
-|-----------------|------------------|
-1 | 8.18% |
-3 | 10.67% |
-5 | 12.03% |
-8 | 14.23% |
-10 | 14.35% |
-
-### Insight
-
-Longer hospital stays strongly correlate with higher readmission risk.
-
-Patients requiring extended hospital care typically have **more severe conditions or complications**, increasing the likelihood of readmission.
+* Cohort segmentation
+* Baseline comparison
+* Absolute and relative risk changes
+* Driver ranking
 
 ---
 
-# 3. Medication Load vs Readmission Risk
+## Key Findings
 
-Medication counts were categorized into three groups:
+### 1. Readmission Rate by Age
 
-| Medication Band | Patients | Readmission Rate |
-|-----------------|---------|------------------|
-Low | 20,515 | 8.83% |
-Medium | 57,371 | 11.32% |
-High | 23,880 | 12.78% |
+* Peak readmission observed in **20–30 age group (~14%)**
+* Rates remain elevated across older groups (~11–12%)
 
-### Insight
-
-Patients receiving **high medication loads show ~45% higher readmission risk** compared to those receiving fewer medications.
-
-This indicates that **treatment complexity is a strong predictor of hospital return risk**.
+**Insight:** Readmission risk rises after early adulthood and remains consistently high across later age groups.
 
 ---
 
-# 4. Diagnosis Complexity vs Readmission Risk
+### 2. Length of Stay Impact
 
-The number of diagnoses per patient was used as a proxy for **disease complexity (multimorbidity)**.
+| Days | Readmission Rate |
+| ---- | ---------------- |
+| 1    | 8.18%            |
+| 5    | 12.03%           |
+| 10   | 14.35%           |
 
-| Diagnoses | Readmission Trend |
-|----------|-------------------|
-1-3 | Low risk (~6-7%) |
-4-7 | Moderate risk (~9-11%) |
-8-10 | Elevated risk (~12-17%) |
+* Relative increase: **~75% vs baseline (1-day stay)**
 
-### Insight
-
-Patients with multiple comorbidities have a significantly higher probability of readmission.
-
-This pattern highlights **multimorbidity as one of the strongest predictors of hospital readmission**.
+**Insight:** Longer hospital stays are strongly associated with higher readmission risk.
 
 ---
 
-# Tableau Dashboard
+### 3. Medication Load Impact
 
-An interactive dashboard was created in **Tableau** to visualize the drivers of hospital readmissions.
+| Band   | Readmission Rate |
+| ------ | ---------------- |
+| Low    | 8.83%            |
+| Medium | 11.32%           |
+| High   | 12.78%           |
 
-View the live dashboard on Tableau Public:
+* Relative increase: **~44.7% vs low medication group**
 
-[View Interactive Tableau Dashboard](https://public.tableau.com/views/HospitalReadmissionRiskAnalysis_17729544247920/Dashboard1?:language=en-US&publish=yes&:sid=&:redirect=auth&:display_count=n&:origin=viz_share_link)
-
----
-
-# Dashboard Preview
-
-Below is a preview of the Tableau dashboard used in this analysis.
-
-![Hospital Readmission Dashboard](dashboard.png)
-
-The dashboard visualizes:
-
-• Readmission Rate by Age  
-• Length of Stay vs Readmission Risk  
-• Medication Load vs Readmission Risk  
-• Diagnosis Complexity vs Readmission Risk  
-
-The interactive version allows filtering and deeper exploration of **high-risk patient segments**.
-
----
-# Tools Used
-
-| Tool | Purpose |
-|-----|--------|
-SQL | Data cleaning and analytical queries |
-Excel | Risk segmentation and pivot analysis |
-Tableau | Data visualization and dashboard creation |
+**Insight:** Higher medication load correlates with increased readmission probability, indicating treatment complexity.
 
 ---
 
-# Key Insights
+### 4. Diagnosis Complexity Impact
 
-• Overall hospital readmission rate across the dataset is **11.16%**.
+| Group  | Readmission Trend |
+| ------ | ----------------- |
+| Low    | ~7%               |
+| Medium | ~9–11%            |
+| High   | ~12–17%           |
 
-• Patients with **longer hospital stays show higher readmission probability**, peaking around 14%.
+* Relative increase: **~76% vs low complexity group**
 
-• **High medication load patients show ~45% higher readmission risk** than low medication patients.
-
-• **Multimorbidity strongly increases readmission risk**, with patients having 10+ diagnoses experiencing significantly higher return rates.
-
-• Readmission risk remains elevated across older age groups, indicating the importance of **post-discharge monitoring for elderly patients**.
+**Insight:** Multimorbidity is one of the strongest predictors of readmission risk.
 
 ---
 
-# Business Impact
+## Driver Ranking
 
-Healthcare providers can use these insights to:
+| Factor               | Relative Increase |
+| -------------------- | ----------------- |
+| Diagnosis Complexity | **~76%**          |
+| Length of Stay       | **~75%**          |
+| Medication Load      | **~45%**          |
 
-• Identify **high-risk patients before discharge**  
-• Improve **post-discharge care planning**  
-• Allocate **follow-up resources more effectively**  
-• Reduce avoidable hospital readmissions
+### Final Insight
 
-Improving readmission management can significantly reduce **hospital operational costs and patient complications**.
+Diagnosis complexity and length of stay are the **primary drivers of readmission risk**, both contributing significantly higher impact than medication load.
+
+---
+
+## Tableau Dashboard
+
+🔗 **[View Interactive Dashboard](https://public.tableau.com/views/HospitalReadmissionRiskAnalysis_17729544247920/Dashboard1?:language=en-US&publish=yes&:sid=&:redirect=auth&:display_count=n&:origin=viz_share_link)**
+
+---
+
+## Dashboard Features
+
+* KPI Overview (Total Encounters, Readmission Rate)
+* Readmission trends by age and length of stay
+* Cohort analysis for medication load and diagnosis complexity
+* Driver ranking visual
+* Executive summary for quick decision-making
+
+---
+
+## Tools Used
+
+| Tool    | Purpose                                             |
+| ------- | --------------------------------------------------- |
+| SQL     | Data cleaning, cohort analysis, risk quantification |
+| Excel   | Intermediate aggregation                            |
+| Tableau | Dashboard and visualization                         |
+
+---
+
+## Business Implications
+
+* Prioritise **high-risk patients (complex diagnoses, long stays)**
+* Improve **discharge planning for complex cases**
+* Allocate **follow-up care resources more effectively**
+* Reduce avoidable readmissions through targeted interventions
+
+---
+
+## Conclusion
+
+This project demonstrates the ability to:
+
+* Perform structured cohort analysis
+* Quantify risk using baseline comparisons
+* Identify and rank key drivers
+* Translate analysis into actionable insights
+* Build executive-level dashboards
+
+---
